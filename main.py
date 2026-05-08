@@ -46,7 +46,7 @@ from enum import Enum
 from queue import Queue as SyncQueue
 from typing import Any, Dict, List, Literal, Optional, AsyncGenerator
 
-# ─── Third-party ───────────────────────────────────────────────────────────
+# ─── Third-party ──────────────────────────────────────────────────────────
 from dotenv import load_dotenv
 from fastapi import (
     APIRouter, BackgroundTasks, Depends, FastAPI, Header,
@@ -59,11 +59,11 @@ from sqlalchemy import (
     Boolean, Column, DateTime, ForeignKey, Integer, String, Text,
     create_engine, select, update,
 )
-from sqlalchemy.orm import DeclarativeBase, Session, Mapped, mapped_column, relationship, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
 load_dotenv()
 
-# ─── Logging ───────────────────────────────────────────────────────────────
+# ─── Logging ──────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -269,7 +269,7 @@ class IdempotencyStore:
 idempotency_store = IdempotencyStore()
 
 
-# ─── Circuit Breaker ────────────────────────────────────────────────────────
+# ─── Circuit Breaker ───────────────────────────────────────────────────────
 
 class CircuitBreaker:
     def __init__(self, threshold: int = 5, timeout: int = 60):
@@ -697,7 +697,7 @@ event_bus.subscribe("RiderAssigned", on_rider_assigned)
 # PYDANTIC SCHEMAS
 # =============================================================================
 
-# ─── User schemas ───────────────────────────────────────────────────────────
+# ─── User schemas ────────────────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -731,7 +731,7 @@ class LoginRequest(BaseModel):
     password: str
 
 
-# ─── Payment schemas ────────────────────────────────────────────────────────
+# ─── Payment schemas ───────────────────────────────────────────────────────
 
 class CreatePaymentRequest(BaseModel):
     order_id: str
@@ -776,7 +776,7 @@ class RestaurantWebhookRequest(BaseModel):
 # ROUTERS
 # =============================================================================
 
-# ─── Health ─────────────────────────────────────────────────────────────────
+# ─── Health ────────────────────────────────────────────────────────────────
 health_router = APIRouter(tags=["Health"])
 
 @health_router.get("/health")
@@ -857,7 +857,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return {"token": token, "user_id": user.user_id, "email": user.email, "username": user.username}
 
 
-# ─── User CRUD ──────────────────────────────────────────────────────────────
+# ─── User CRUD ─────────────────────────────────────────────────────────────
 users_router = APIRouter(prefix="/users", tags=["Users"])
 
 @users_router.get("")
@@ -990,7 +990,7 @@ async def confirm_payment(data: ConfirmPaymentRequest, db: Session = Depends(get
 
     if new_status == "succeeded":
         event_bus.publish("PaymentSuccess", {
-            "order_id": tx.order_id, "amount": tx.amount / 100,
+            "order_id": tx.order_id, "amount": tx.amount,
             "payment_intent_id": tx.payment_intent_id,
             "customer_email": tx.customer_email,
         })
@@ -1082,7 +1082,7 @@ async def process_payment_idempotent(req: CreatePaymentRequest, background_tasks
         idempotency_store.set(idem_key, txn_id, "success", response)
         background_tasks.add_task(
             event_bus.publish, "PaymentSuccess",
-            {"order_id": req.order_id, "amount": req.amount / 100,
+            {"order_id": req.order_id, "amount": req.amount,
              "transaction_id": txn_id, "idempotency_key": idem_key}
         )
         return response
@@ -1312,7 +1312,7 @@ def list_cloud_orders():
     return {"orders": list(_cloud_orders.values())}
 
 
-# ─── System-wide endpoints ──────────────────────────────────────────────────
+# ─── System-wide endpoints ────────────────────────────────────────────────────
 system_router = APIRouter(tags=["System"])
 
 
@@ -1353,7 +1353,7 @@ def order_status(order_id: str, db: Session = Depends(get_db)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── Startup ──────────────────────────────────────────────────────────────
+    # ── Startup ────────────────────────────────────────────────────────────
     logger.info("🚀 Starting Food Delivery System...")
     init_db()
     rider_store.seed(5)
@@ -1367,7 +1367,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("🎉 All modules initialised — system ready!")
     yield
-    # ── Shutdown ─────────────────────────────────────────────────────────────
+    # ── Shutdown ───────────────────────────────────────────────────────────
     logger.info("Shutting down Food Delivery System...")
 
 
